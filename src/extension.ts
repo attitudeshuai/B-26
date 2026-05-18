@@ -23,31 +23,52 @@ export function activate(context: vscode.ExtensionContext) {
         // Get jar path from configuration
         const config = vscode.workspace.getConfiguration('folderJarPacker');
         const jarCommand = config.get<string>('jarPath') || 'jar';
-        
-        // We want to create the jar in the PARENT directory of the selected folder
-        // The jar will contain the contents OF the selected folder
-        const timestamp = new Date().getTime();
-        const jarName = `${folderName}-patch-${timestamp}.jar`;
-        const jarPath = path.join(parentDir, jarName);
-        
-        // Command interpretation:
-        // jar -cf [jarPath] -C [folderPath] .
-        // buffer max size 10MB to be safe
-        const command = `"${jarCommand}" -cf "${jarPath}" -C "${folderPath}" .`;
 
-        exec(command, { maxBuffer: 1024 * 1024 * 10 }, (error, stdout, stderr) => {
-            if (error && !stderr) {
-                const errorMessage = error.message;
-                if (errorMessage.includes("Unable to locate a Java Runtime")) {
-                     vscode.window.showErrorMessage(`打包失败: 未找到 Java 运行环境。请安装 Java 或在设置中配置 'folderJarPacker.jarPath'。`);
-                } else {
-                     vscode.window.showErrorMessage(`打包 JAR 失败: ${error.message}`);
-                }
-                console.error(stderr);
+        // 2.1 Preflight: verify the jar executable exists/launchable before running.
+        // This prevents false "success" when Java is not installed on the machine.
+        const isCustomPath = jarCommand !== 'jar' && jarCommand.includes(path.sep) || jarCommand.includes('/') || jarCommand.includes('\\');
+        const platform = process.platform;
+        const probeCommand = platform === 'win32'
+            ? `where ${jarCommand}`
+            : `command -v ${jarCommand}`;
+
+        exec(probeCommand, (probeError, probeStdout) => {
+            let jarAvailable = !probeError && probeStdout && probeStdout.trim().length > 0;
+            if (!jarAvailable && isCustomPath) {
+                jarAvailable = fs.existsSync(jarCommand);
+            }
+            if (!jarAvailable) {
+                vscode.window.showErrorMessage(`打包失败: 未找到 Java 运行环境。请安装 Java 或在设置中配置 'folderJarPacker.jarPath'。`);
                 return;
             }
+
+            // We want to create the jar in the PARENT directory of the selected folder
+            // The jar will contain the contents OF the selected folder
+            const timestamp = new Date().getTime();
+            const jarName = `${folderName}-patch-${timestamp}.jar`;
+            const jarPath = path.join(parentDir, jarName);
             
-            vscode.window.showInformationMessage(`成功创建补丁包: ${jarName}`);
+            // Command interpretation:
+            // jar -cf [jarPath] -C [folderPath] .
+            // buffer max size 10MB to be safe
+            const command = `"${jarCommand}" -cf "${jarPath}" -C "${folderPath}" .`;
+
+            exec(command, { maxBuffer: 1024 * 1024 * 10 }, (error, stdout, stderr) => {
+                if (error && !stderr) {
+                    const errorMessage = error.message;
+                    if (errorMessage.includes("Unable to locate a Java Runtime")
+                        || errorMessage.includes("jar: command not found")
+                        || errorMessage.includes("'jar' is not recognized")) {
+                         vscode.window.showErrorMessage(`打包失败: 未找到 Java 运行环境。请安装 Java 或在设置中配置 'folderJarPacker.jarPath'。`);
+                    } else {
+                         vscode.window.showErrorMessage(`打包 JAR 失败: ${error.message}`);
+                    }
+                    console.error(stderr);
+                    return;
+                }
+                
+                vscode.window.showInformationMessage(`成功创建补丁包: ${jarName}`);
+            });
         });
     });
 
