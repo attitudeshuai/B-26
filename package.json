@@ -1,0 +1,52 @@
+{
+  "name": "folder-jar-packer",
+  "displayName": "文件夹打包工具",
+  "description": "右键点击文件夹将其打包为 JAR 文件",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "extension.packageToPatchJar",
+        "title": "打包为补丁 JAR (Package to Patch Jar)"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "extension.packageToPatchJar",
+          "when": "explorerResourceIsFolder",
+          "group": "packaging"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Folder Jar Packer",
+      "properties": {
+        "folderJarPacker.jarPath": {
+          "type": "string",
+          "default": "jar",
+          "description": "Path to the 'jar' executable. e.g. /usr/local/bin/jar or full path to JDK jar.",
+          "markdownDescription": "jar 可执行文件的路径。如果系统环境变量中找不到 jar，可以在此指定完整路径。例如：`/Library/Java/JavaVirtualMachines/jdk-17.jdk/Contents/Home/bin/jar`"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.80.0",
+    "@types/node": "^16.x",
+    "typescript": "^5.1.3"
+  }
+}
