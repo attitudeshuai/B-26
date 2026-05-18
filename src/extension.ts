@@ -36,14 +36,19 @@ export function activate(context: vscode.ExtensionContext) {
         const command = `"${jarCommand}" -cf "${jarPath}" -C "${folderPath}" .`;
 
         exec(command, { maxBuffer: 1024 * 1024 * 10 }, (error, stdout, stderr) => {
-            if (error && !stderr) {
+            if (error) {
                 const errorMessage = error.message;
-                if (errorMessage.includes("Unable to locate a Java Runtime")) {
+                if (errorMessage.includes("Unable to locate a Java Runtime") || errorMessage.includes("not found") || errorMessage.includes("未找到")) {
                      vscode.window.showErrorMessage(`打包失败: 未找到 Java 运行环境。请安装 Java 或在设置中配置 'folderJarPacker.jarPath'。`);
                 } else {
                      vscode.window.showErrorMessage(`打包 JAR 失败: ${error.message}`);
                 }
                 console.error(stderr);
+                return;
+            }
+
+            if (!fs.existsSync(jarPath)) {
+                vscode.window.showErrorMessage(`打包失败: 未找到生成的 JAR 文件。`);
                 return;
             }
             
