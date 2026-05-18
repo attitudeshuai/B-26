@@ -36,7 +36,7 @@ export function activate(context: vscode.ExtensionContext) {
         const command = `"${jarCommand}" -cf "${jarPath}" -C "${folderPath}" .`;
 
         exec(command, { maxBuffer: 1024 * 1024 * 10 }, (error, stdout, stderr) => {
-            if (error && !stderr) {
+            if (error) {
                 const errorMessage = error.message;
                 if (errorMessage.includes("Unable to locate a Java Runtime")) {
                      vscode.window.showErrorMessage(`打包失败: 未找到 Java 运行环境。请安装 Java 或在设置中配置 'folderJarPacker.jarPath'。`);
